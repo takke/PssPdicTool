@@ -14,8 +14,26 @@ static HDDEDATA CALLBACK DdeCallback(UINT uType, UINT uFmt, HCONV hconv, HSZ hsz
 	return (HDDEDATA)NULL;
 }
 
+void doQuery(PdicSearchManager& psm, LPCTSTR s) {
+
+	wprintf(L"psm.findw[%s]", s);
+	if (!psm.findw(s)) {
+		wprintf(L" -> not found\n\n");
+	}
+	else {
+		std_xstring strAnswer, strQuestion, strDesc;
+		if (!psm.get_wordw(strAnswer))		{ wprintf(L"error:get_wordw\n"); }
+		if (!psm.get_japaw(strQuestion))	{ wprintf(L"error:get_japaw\n"); }
+		if (!psm.get_expw(strDesc))			{ wprintf(L"error:get_expw\n"); }
+
+		wprintf(L" -> found [%s][%s][%s]\n\n", strAnswer.c_str(), strQuestion.c_str(), strDesc.c_str());
+	}
+}
+
 int main()
 {
+	setlocale(LC_ALL, "Japanese");
+
 	HDdeManager hdm(DdeCallback);
 	PdicSearchManager psm(hdm);
 	if (!psm.init_pdicw()) {
@@ -23,20 +41,11 @@ int main()
 		return -1;
 	}
 
-	LPCTSTR s = L"être";
-	wprintf(L"psm.findw[%s]", s);
-	if (!psm.findw(s)) {
-		wprintf(L" -> not found\n");
-	}
-	else {
-		std_xstring strAnswer, strQuestion, strDesc;
-		psm.get_wordw(strAnswer);
-		psm.get_japaw(strQuestion);
-		psm.get_expw(strDesc);
+	doQuery(psm, L"être");
 
-		wprintf(L" -> found [%s][%s][%s]\n", strAnswer.c_str(), strQuestion.c_str(), strDesc.c_str());
-	}
+	doQuery(psm, L"achète");
 
+	doQuery(psm, L"acheter");
 
     return 0;
 }
