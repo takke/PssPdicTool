@@ -79,8 +79,10 @@ public:
 			wprintf(L"*requestw[DdeAccessData error: 0x%X]\n", DdeGetLastError(ddeinst_));
 		}
 		else {
-			if (dwSize > 0) {
-				strResult.assign(p, dwSize);
+			wprintf(L"*requestw[DdeAccessData %d]\n", dwSize);
+			int usize = dwSize / 2 - 1;
+			if (usize > 0) {
+				strResult.assign(p, usize);
 			}
 			rval = true;
 		}
