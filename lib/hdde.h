@@ -64,65 +64,59 @@ public:
 
 		HDDEDATA hdata = DdeClientTransaction( NULL, 0, hconv_, hszCmd, CF_UNICODETEXT, XTYP_REQUEST, 9999, NULL );
 		if( hdata==NULL ) {
+			wprintf(L"*requestw[DdeClientTransaction error: 0x%X]\n", DdeGetLastError(ddeinst_));
 			DdeFreeStringHandle( ddeinst_, hszCmd );
-			return NULL;
-		}
-/*
-		DWORD dwSize = 0;
-		TCHAR* p = (TCHAR*)DdeAccessData( hdata, &dwSize );
-//		int usize = dwSize/2-1;
-		int usize = dwSize;
-		std::wstring strResult;
-		if (usize>=0) {
-			strResult.assign(p, usize);
+			return false;
 		}
 
-		DdeUnaccessData( hdata );
-*/
 		bool rval = false;
 
+#define USE_DDE_ACCESS_DATA
+#ifdef  USE_DDE_ACCESS_DATA
+		DWORD dwSize = 0;
+		TCHAR* p = (TCHAR*)DdeAccessData( hdata, &dwSize );
+		if (p == NULL) {
+			wprintf(L"*requestw[DdeAccessData error: 0x%X]\n", DdeGetLastError(ddeinst_));
+		}
+		else {
+			if (dwSize > 0) {
+				strResult.assign(p, dwSize);
+			}
+			rval = true;
+		}
+		DdeUnaccessData( hdata );
+#else
+		// NotFound後のクエリーがなぜか "DdeGetData(1) error: 0x4009" になる。次の requestw は成功する・・・。
 		std::vector<wchar_t> result;
 		DWORD length = DdeGetData(hdata, NULL, 0, 0);
-		if (length > 0)
-		{
-			result.resize(length*2 + 1);
-
-			DWORD actual = DdeGetData(hdata, (LPBYTE)&result[0], length*2, 0);
-			if (DdeGetLastError(ddeinst_) == DMLERR_NO_ERROR)
+		UINT e = DdeGetLastError(ddeinst_);
+		if (e != DMLERR_NO_ERROR) {
+			wprintf(L"*requestw[DdeGetData(1) error: 0x%X]\n", e);
+		}
+		else {
+			if (length > 0)
 			{
+				result.resize(length);
+
+				DWORD actual = DdeGetData(hdata, (LPBYTE)&result[0], length, 0);
+				UINT e = DdeGetLastError(ddeinst_);
+				if (e == DMLERR_NO_ERROR)
 				{
-					if (length > 2)
-					{
-						// remove '\r\n'
-/*						int pos = *lenResult - 1;
-						if (pos > 0)
-						{
-							if (Result[*lenResult - 1] == L'\n')
-							{
-								Result[*lenResult - 1] = L'\0';
-							}
-						}
-						*lenResult = (int)wcslen(Result);
-						pos = *lenResult - 2;
-						if (pos > 0)
-						{
-							if (Result[*lenResult - 2] == L'\r')
-							{
-								Result[*lenResult - 2] = L'\0';
-							}
-						}
-
-						*lenResult = (int)wcslen(Result);
-*/					}
+					strResult.assign(&result[0]);
+					wprintf(L"*requestw[%d][%d][%s][%d]\n", length, actual, &result[0], strResult.size());
+					rval = true;
 				}
-
-				strResult.assign(&result[0]);
-				wprintf(L"*requestw[%d][%d][%s][%d]\n", length, actual, &result[0], strResult.size());
-				rval = true;
+				else {
+					wprintf(L"*requestw[DdeGetData(2) error: 0x%X]\n", e);
+				}
+			}
+			else {
+				wprintf(L"*requestw[DdeGetData(1) length = 0]\n");
 			}
 		}
-
 		DdeFreeDataHandle( hdata );
+#endif
+
 		DdeFreeStringHandle( ddeinst_, hszCmd );
 
 		return rval;
